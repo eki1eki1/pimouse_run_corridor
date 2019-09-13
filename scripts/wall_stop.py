@@ -1,17 +1,5 @@
 #!/usr/bin/env python
 
-
-
-#motors.py
-
-#Copyright (c) 2016 Ryuichi Ueda <ryuichiueda@gmail.com>
-
-#This software is released under the MIT License.
-
-#http://opensource.org/licenses/mit-license.php
-
-
-
 import rospy,copy
 
 from geometry_msgs.msg import Twist
@@ -22,7 +10,7 @@ from pimouse_ros.msg import LightSensorValues
 
 
 
-class WallTrace():
+class WallStop():
 
     def __init__(self):
 
@@ -32,11 +20,11 @@ class WallTrace():
 
         self.sensor_values = LightSensorValues()
 
-        rospy.Subscriber('/lightsensors', LightSensorValues, self.callback_lightsensors)
+        rospy.Subscriber('/lightsensors', LightSensorValues, self.callback)
 
 
 
-    def callback_lightsensors(self,messages):
+    def callback(self,messages):
 
         self.sensor_values = messages
 
@@ -52,29 +40,17 @@ class WallTrace():
 
         while not rospy.is_shutdown():
 
-            data.linear.x = 0.2
+		data.linear.x = 0.2 if self.sensor_values.sum_all < 500 else 0.0
 
-            data.angular.z = 0
+	        self.cmd_vel.publish(data)
 
-            if self.sensor_values.sum_all >= 500:
-
-                data.linear.x = 0
-
-                data.angular.z = 0
-
-
-
-            self.cmd_vel.publish(data)
-
-            rate.sleep()
+                rate.sleep()
 
 
 
 if __name__ == '__main__':
 
-    rospy.init_node('wall_trace')
-
-
+    rospy.init_node('wall_stop')
 
     rospy.wait_for_service('/motor_on')
 
@@ -84,8 +60,4 @@ if __name__ == '__main__':
 
     rospy.ServiceProxy('/motor_on',Trigger).call()
 
-
-
-    w = WallTrace()
-
-    w.run()
+    WallStop().run()
